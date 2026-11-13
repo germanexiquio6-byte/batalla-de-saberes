@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Batalla de Saberes</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#101827;color:#f7f8fc;font-family:system-ui,Arial,sans-serif;padding:16px}
+main{max-width:760px;margin:auto}.card{background:#1d293b;border:1px solid #34445c;border-radius:18px;padding:16px;margin:12px 0}
+h1{text-align:center;margin:8px 0;color:#fff} .sub{text-align:center;color:#bdc9da;margin:0 0 18px}
+.teams{display:grid;grid-template-columns:1fr 1fr;gap:10px}.team{padding:12px;border-radius:14px;text-align:center;font-weight:800}.red{background:#7d2635}.blue{background:#214f8d}.score{font-size:32px}
+.meta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;color:#c9d4e4;font-size:14px}
+.timer{font-size:38px;font-weight:900;text-align:center;margin:8px}.question{font-size:22px;font-weight:800;line-height:1.3;margin:18px 0}
+.answers{display:grid;gap:9px}.answers button{background:#2a3b54;text-align:left}
+button,select{border:0;border-radius:12px;padding:13px;font-size:16px;font-weight:750;color:white;background:#405674;cursor:pointer}
+button:disabled{opacity:.4}.answers button.correct{background:#176b4b}.answers button.wrong{background:#8a2936}
+.controls{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.controls button{background:#35465f}
+.primary{background:#d44752}.next{background:#176b4b}.small{font-size:13px;color:#b9c6d8}
+select{width:100%;background:#2a3b54;margin-top:8px}
+.notice{text-align:center;font-weight:800;min-height:26px;color:#ffdc8a}
+@media(min-width:600px){.controls{grid-template-columns:repeat(4,1fr)}}
+</style>
+
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#101827">
+<meta name="description" content="Batalla de Saberes: juego de preguntas para dos equipos, funciona sin conexión.">
+<link rel="icon" href="icon-192.png">
+</head>
+<body><main>
+<h1>⚔️ BATALLA DE SABERES</h1><p class="sub">Dos equipos · 36 preguntas · ¡Gana quien llegue a 100 puntos!</p>
+<section class="card">
+<div class="teams">
+<div class="team red">🔴 EQUIPO ROJO<div class="score" id="redScore">0</div></div>
+<div class="team blue">🔵 EQUIPO AZUL<div class="score" id="blueScore">0</div></div>
+</div>
+<div class="meta" style="margin-top:14px"><span id="round">Pregunta 1 de 36</span><span id="turn">Turno: Equipo rojo</span></div>
+</section>
+<section class="card">
+<div class="meta"><label>Dificultad<select id="difficulty"><option value="all">Aleatoria</option><option value="Fácil">Fácil</option><option value="Normal">Normal</option><option value="Media">Media</option><option value="Difícil">Difícil</option><option value="Extrema">Extrema</option></select></label><span id="points">Puntos: —</span></div>
+<div class="timer" id="timer">15</div>
+<div class="question" id="question">Presiona «Comenzar» para jugar.</div>
+<div class="answers" id="answers"></div>
+<div class="notice" id="notice"></div>
+</section>
+<section class="card">
+<div class="controls">
+<button class="primary" id="start">▶ Comenzar</button><button id="pause">⏸ Pausar</button><button id="plus">＋ 5 segundos</button><button id="minus">－ 5 segundos</button><button class="next" id="next">Siguiente pregunta ➜</button><button id="restart">↻ Reiniciar</button>
+</div>
+<p class="small">Cada ronda selecciona 36 preguntas distintas al azar, sin repetirlas en esa ronda. Al reiniciar se eligen preguntas nuevas.</p>
+</section>
+</main>
+<script>
+const bank = [
+["¿Cuánto es 7 × 8?",["54","56","64","48"],1,"Fácil"],
+["¿Cuál es la capital de México?",["Guadalajara","Monterrey","Ciudad de México","Puebla"],2,"Fácil"],
+["¿Qué planeta es conocido como el planeta rojo?",["Venus","Marte","Júpiter","Saturno"],1,"Fácil"],
+["¿Cuántos lados tiene un hexágono?",["5","6","7","8"],1,"Fácil"],
+["¿Cuál es el océano más grande?",["Atlántico","Índico","Ártico","Pacífico"],3,"Fácil"],
+["¿Qué animal es un mamífero?",["Tiburón","Delfín","Cocodrilo","Águila"],1,"Fácil"],
+["¿Cuántos minutos tiene una hora?",["50","60","100","30"],1,"Fácil"],
+["¿Qué gas respiramos principalmente para vivir?",["Oxígeno","Helio","Hidrógeno","Nitrógeno"],0,"Fácil"],
+["¿Cuál es el resultado de 100 ÷ 4?",["20","25","30","40"],1,"Fácil"],
+["¿En qué continente está Egipto?",["Asia","Europa","África","Oceanía"],2,"Fácil"],
+["¿Qué instrumento mide la temperatura?",["Barómetro","Termómetro","Brújula","Regla"],1,"Fácil"],
+["¿Cuántos días tiene un año bisiesto?",["364","365","366","367"],2,"Fácil"],
+["¿Quién escribió Don Quijote de la Mancha?",["Cervantes","Shakespeare","Neruda","Borges"],0,"Normal"],
+["¿Cuál es la fórmula química del agua?",["CO2","H2O","O2","NaCl"],1,"Normal"],
+["¿En qué año comenzó la Independencia de México?",["1810","1821","1910","1808"],0,"Normal"],
+["¿Cuál es el órgano que bombea la sangre?",["Pulmón","Cerebro","Corazón","Hígado"],2,"Normal"],
+["¿Cuánto es 15 al cuadrado?",["125","200","225","250"],2,"Normal"],
+["¿Qué país tiene forma de bota?",["Grecia","Italia","Chile","Portugal"],1,"Normal"],
+["¿Cuál es el idioma más hablado por número de hablantes nativos?",["Inglés","Español","Chino mandarín","Hindi"],2,"Normal"],
+["¿Qué fuerza nos mantiene sobre el suelo?",["Magnetismo","Gravedad","Fricción","Electricidad"],1,"Normal"],
+["¿Cuál es el símbolo químico del oro?",["Ag","Au","Fe","Go"],1,"Normal"],
+["¿Qué parte de la célula contiene la mayor parte del ADN?",["Núcleo","Membrana","Citoplasma","Pared"],0,"Normal"],
+["¿Cuántos grados tiene un ángulo recto?",["45","90","180","360"],1,"Normal"],
+["¿Cuál es el río más largo de Sudamérica?",["Orinoco","Paraná","Amazonas","Magdalena"],2,"Media"],
+["¿Qué científico formuló la ley de la gravitación universal?",["Einstein","Newton","Galileo","Tesla"],1,"Media"],
+["¿Cuál es el número primo más pequeño?",["0","1","2","3"],2,"Media"],
+["¿Qué proceso realizan las plantas para producir alimento?",["Respiración","Fotosíntesis","Fermentación","Digestión"],1,"Media"],
+["¿En qué capa de la atmósfera ocurren la mayoría de los fenómenos meteorológicos?",["Estratosfera","Mesosfera","Troposfera","Termosfera"],2,"Media"],
+["¿Qué civilización construyó Machu Picchu?",["Maya","Azteca","Inca","Olmeca"],2,"Media"],
+["¿Cuál es la raíz cuadrada de 144?",["10","11","12","14"],2,"Media"],
+["¿Qué metal es líquido a temperatura ambiente?",["Mercurio","Cobre","Aluminio","Plata"],0,"Media"],
+["¿Cuál es la unidad de fuerza en el Sistema Internacional?",["Joule","Watt","Newton","Pascal"],2,"Media"],
+["¿Qué tratado puso fin oficialmente a la Primera Guerra Mundial con Alemania?",["Versalles","Tordesillas","París","Utrecht"],0,"Difícil"],
+["¿Cuál es el valor aproximado de π?",["2.14","3.14","4.13","3.41"],1,"Difícil"],
+["¿Qué elemento químico tiene número atómico 6?",["Oxígeno","Carbono","Nitrógeno","Helio"],1,"Difícil"],
+["¿Cuál es la capital de Australia?",["Sídney","Melbourne","Canberra","Perth"],2,"Difícil"],
+["¿Qué científico propuso la teoría de la evolución por selección natural?",["Darwin","Pasteur","Mendel","Bohr"],0,"Difícil"],
+["¿Cuánto suman los ángulos interiores de un triángulo?",["90°","180°","270°","360°"],1,"Difícil"],
+["¿Qué órgano produce insulina?",["Riñón","Páncreas","Bazo","Estómago"],1,"Difícil"],
+["¿Cuál es el resultado de 2 elevado a la quinta potencia?",["16","24","32","64"],2,"Difícil"],
+["¿Qué país fue conocido antiguamente como Persia?",["Irak","Irán","Siria","Turquía"],1,"Difícil"],
+["¿Qué partícula subatómica tiene carga negativa?",["Protón","Neutrón","Electrón","Positrón"],2,"Extrema"],
+["¿Cuál es la derivada de x²?",["x","2x","x³","2"],1,"Extrema"],
+["¿Qué vitamina se produce en la piel con ayuda de la luz solar?",["A","B12","C","D"],3,"Extrema"],
+["¿Cuál es el gas más abundante en la atmósfera terrestre?",["Oxígeno","Nitrógeno","Argón","Dióxido de carbono"],1,"Extrema"],
+["¿Qué matemático es asociado con el último teorema que lleva su nombre?",["Fermat","Euler","Gauss","Pascal"],0,"Extrema"],
+["¿En qué año cayó Constantinopla ante los otomanos?",["1204","1453","1492","1517"],1,"Extrema"],
+["¿Qué tipo de enlace comparte pares de electrones?",["Iónico","Covalente","Metálico","Nuclear"],1,"Extrema"],
+["¿Cuál es la unidad básica de la corriente eléctrica?",["Voltio","Ohmio","Amperio","Culombio"],2,"Extrema"],
+["¿Qué fenómeno explica el cambio de dirección de la luz al pasar entre medios?",["Reflexión","Difracción","Refracción","Dispersión"],2,"Extrema"],
+["¿Cuál es el nombre del proceso por el que una célula se divide en dos células hijas idénticas?",["Meiosis","Mitosis","Ósmosis","Mutación"],1,"Extrema"],
+["¿Qué número representa el prefijo micro en el sistema internacional?",["10⁻³","10⁻⁶","10⁻⁹","10⁶"],1,"Extrema"],
+["¿Cuál es el principal componente del gas natural?",["Metano","Propano","Butano","Etano"],0,"Extrema"],
+["¿Qué científico desarrolló las ecuaciones clásicas del electromagnetismo?",["Maxwell","Faraday","Bohr","Hubble"],0,"Extrema"],
+["¿Qué estructura celular modifica y empaqueta proteínas?",["Ribosoma","Aparato de Golgi","Lisosoma","Centríolo"],1,"Extrema"],
+["¿Cuál es el resultado de 9 factorial (9!)?",["362880","40320","36280","720"],0,"Extrema"],
+["¿Qué escala se usa para medir la dureza de los minerales?",["Mohs","Richter","Celsius","Beaufort"],0,"Extrema"],
+["¿Qué rama de las matemáticas estudia las propiedades de los números enteros?",["Geometría","Álgebra lineal","Teoría de números","Cálculo"],2,"Extrema"]
+];
+const pts={"Fácil":[3,6],"Normal":[5,9],"Media":[8,13],"Difícil":[10,17],"Extrema":[15,25]};
+let questions=[],idx=0,scores=[0,0],team=0,time=15,timer=null,paused=false,answered=false,started=false;
+const $=id=>document.getElementById(id);
+function shuffle(a){return [...a].sort(()=>Math.random()-.5)}
+function fresh(){questions=shuffle(bank).slice(0,36);idx=0;scores=[0,0];team=0;time=15;paused=false;answered=false;started=false;clearInterval(timer);timer=null;render()}
+function current(){return questions[idx]}
+function render(){
+ $("redScore").textContent=scores[0];$("blueScore").textContent=scores[1];
+ $("round").textContent=`Pregunta ${Math.min(idx+1,36)} de 36`;
+ $("turn").textContent=`Turno: Equipo ${team===0?"rojo":"azul"}`;
+ $("timer").textContent=time;
+ $("pause").textContent=paused?"▶ Continuar":"⏸ Pausar";
+ if(!started){$("question").textContent="Presiona «Comenzar» para jugar."; $("answers").innerHTML="";$("points").textContent="Puntos: —";return}
+ if(idx>=36){finish();return}
+ const q=current();let d=$("difficulty").value;if(d==="all")d=q[3];const range=pts[d];let p=Math.floor(Math.random()*(range[1]-range[0]+1))+range[0];
+ $("points").textContent=`${d} · ${p} puntos`; $("question").textContent=q[0];$("notice").textContent="";
+ $("answers").innerHTML="";
+ q[1].forEach((a,i)=>{let b=document.createElement("button");b.textContent=`${"ABCD"[i]}. ${a}`;b.onclick=()=>answer(i,p);$("answers").appendChild(b)});
+}
+function tick(){clearInterval(timer);timer=setInterval(()=>{if(paused||!started||answered)return;time--; $("timer").textContent=time;if(time<=0){clearInterval(timer);$("notice").textContent="⏰ ¡Se acabó el tiempo!";lock();setTimeout(next,1000)}},1000)}
+function start(){if(started)return;started=true;time=15;render();tick()}
+function lock(){answered=true;[...$("answers").children].forEach((b,i)=>{b.disabled=true;if(i===current()[2])b.classList.add("correct")})}
+function answer(i,p){if(answered)return;clearInterval(timer);answered=true;let ok=i===current()[2];if(ok){scores[team]+=p;$("notice").textContent=`¡Correcto! +${p} puntos para el equipo ${team===0?"rojo":"azul"}`}else{$("notice").textContent="Incorrecto. ¡Punto para nadie!"}
+[...$("answers").children].forEach((b,j)=>{b.disabled=true;if(j===current()[2])b.classList.add("correct");else if(j===i)b.classList.add("wrong")});$("redScore").textContent=scores[0];$("blueScore").textContent=scores[1];if(scores[team]>=100){setTimeout(finish,900)}}
+function next(){if(!started){start();return}if(scores[0]>=100||scores[1]>=100||idx>=35){finish();return}idx++;team=1-team;time=15;answered=false;paused=false;render();tick()}
+function finish(){clearInterval(timer);started=false;let msg=scores[0]===scores[1]?"¡EMPATE!":scores[0]>scores[1]?"🏆 ¡GANA EL EQUIPO ROJO!":"🏆 ¡GANA EL EQUIPO AZUL!";$("question").textContent=msg;$("answers").innerHTML=`<p style="text-align:center">Rojo: ${scores[0]} puntos · Azul: ${scores[1]} puntos</p>`;$("notice").textContent="¡Partida terminada! Presiona Reiniciar para otra ronda."; $("round").textContent="Final del juego"}
+$("start").onclick=start;$("pause").onclick=()=>{if(!started)return;paused=!paused;$("pause").textContent=paused?"▶ Continuar":"⏸ Pausar";if(!paused&&!answered)tick();else clearInterval(timer)};
+$("plus").onclick=()=>{time+=5;$("timer").textContent=time};$("minus").onclick=()=>{time=Math.max(0,time-5);$("timer").textContent=time;if(time===0&&started&&!answered){clearInterval(timer);$("notice").textContent="⏰ ¡Se acabó el tiempo!";lock();setTimeout(next,800)}};
+$("next").onclick=next;$("restart").onclick=()=>{if(confirm("¿Reiniciar la partida y elegir preguntas nuevas?"))fresh()};
+fresh();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
+</script>
+</body></html>
